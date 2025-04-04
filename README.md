@@ -62,6 +62,10 @@ and technical performance metrics:
 | All team members | Continuous X pipeline              |
 
 **System Diagram**
+</br></br>
+<img src="assets/projectdiagram.png" width="600" style="padding: 20px;">
+
+
 
 The system consists of:
 
