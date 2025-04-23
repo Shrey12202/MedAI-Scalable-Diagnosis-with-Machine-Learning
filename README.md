@@ -83,24 +83,6 @@ The system consists of:
 
 **Summary of Outside Materials**
 
-**Dataset : NIHCC -- Open Source**
-
-[**https://nihcc.app.box.com/v/ChestXray-NIHCC/folder/36938765345**](https://nihcc.app.box.com/v/ChestXray-NIHCC/folder/36938765345)
-
-The **NIH Chest X-ray Dataset**, provided by the National Institutes of
-Health Clinical Center (NIHCC), consists of over **112,000 frontal-view
-chest X-ray images** collected from **30,805 unique patients** across
-multiple hospitals. Each image is labeled with **one or more of 14
-common thoracic diseases**, including pneumonia, emphysema, and
-fibrosis. These labels were assigned based on **manual annotations**
-provided by radiologists. In addition to the images, the dataset
-includes **metadata such as patient age, gender, and pathology labels**,
-making it a valuable resource for multi-class disease classification.
-Given its large size and diverse pathology coverage, this dataset is
-widely used for training AI models in automated radiological
-diagnostics. The dataset is **open for research purposes only**, subject
-to ethical considerations and NIH dataset policies.
-
 **Dataset : Stanford AIMI -- Open Source**
 
 [**https://stanfordaimi.azurewebsites.net/datasets/8cbd9ed4-2eb9-4565-affc-111cf4f7ebe2**](https://stanfordaimi.azurewebsites.net/datasets/8cbd9ed4-2eb9-4565-affc-111cf4f7ebe2)
