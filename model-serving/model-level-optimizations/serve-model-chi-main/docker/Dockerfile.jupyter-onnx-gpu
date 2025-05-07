@@ -1,0 +1,37 @@
+FROM quay.io/jupyter/pytorch-notebook:cuda12-pytorch-2.5.1
+
+USER root
+RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb && \
+        dpkg -i cuda-keyring_1.1-1_all.deb && \
+        rm cuda-keyring_1.1-1_all.deb && \
+        apt-get update && \
+        apt-get -y install cudnn9-cuda-12
+
+
+USER ${NB_UID}
+RUN pip install --pre --no-cache-dir \
+    'torchinfo' \
+    'neural-compressor' \
+    'onnx' \
+    'onnxruntime-gpu' \
+    'tensorrt' \
+    'tensorrt-cu12'  \
+    'tensorrt-cu12-bindings' \
+    'tensorrt-cu12-libs' && \
+    fix-permissions "${CONDA_DIR}" && \
+    fix-permissions "/home/${NB_USER}"
+
+# Make sure the NVIDIA and TensorRT libraries will be available for use by ONNX runtime
+ENV LD_LIBRARY_PATH="/opt/conda/lib/python3.12/site-packages/nvidia/cublas/lib:\
+/opt/conda/lib/python3.12/site-packages/nvidia/cuda_cupti/lib:\
+/opt/conda/lib/python3.12/site-packages/nvidia/cuda_nvrtc/lib:\
+/opt/conda/lib/python3.12/site-packages/nvidia/cuda_runtime/lib:\
+/opt/conda/lib/python3.12/site-packages/nvidia/cudnn/lib:\
+/opt/conda/lib/python3.12/site-packages/nvidia/cufft/lib:\
+/opt/conda/lib/python3.12/site-packages/nvidia/curand/lib:\
+/opt/conda/lib/python3.12/site-packages/nvidia/cusolver/lib:\
+/opt/conda/lib/python3.12/site-packages/nvidia/cusparse/lib:\
+/opt/conda/lib/python3.12/site-packages/nvidia/nccl/lib:\
+/opt/conda/lib/python3.12/site-packages/nvidia/nvjitlink/lib:\
+/opt/conda/lib/python3.12/site-packages/nvidia/nvtx/lib:\
+/opt/conda/lib/python3.12/site-packages/tensorrt_libs"

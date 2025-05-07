@@ -1,0 +1,35 @@
+name: chexpert-etl
+
+volumes:
+  chexpert:
+    external: true  # Uses externally created volume
+
+services:
+  init-data:
+    image: python:3.11
+    volumes:
+      - chexpert:/data
+    working_dir: /data
+    command:
+      - bash
+      - -c
+      - |
+        set -e  # Stop on error
+
+        echo "Installing gdown..."
+        pip install gdown
+
+        echo "Creating dataset directory..."
+        mkdir -p /data/chexpert && cd /data/chexpert
+
+        echo "Downloading dataset zip from Google Drive..."
+        gdown --id 1HUuVj-Q5ak2G0UF1fozr1bm2dokh97z -O chexpert.zip
+
+        echo "Extracting dataset..."
+        unzip -q chexpert.zip
+        rm -f chexpert.zip
+
+        echo "Listing directory contents:"
+        ls -l /data/chexpert
+
+    restart: "no"
