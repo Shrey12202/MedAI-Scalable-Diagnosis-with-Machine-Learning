@@ -1,0 +1,43 @@
+name: ls
+services:
+  label-studio:
+    image: heartexlabs/label-studio:1.16.0
+    container_name: label-studio
+    ports:
+      - "8080:8080"
+    volumes:
+      - /home/cc/eval-loop-chi/scripts:/label-studio/scripts
+    environment:
+      - LABEL_STUDIO_URL=http://label-studio:8080
+      - LABEL_STUDIO_USERNAME=labelstudio@example.com
+      - LABEL_STUDIO_PASSWORD=labelstudio
+      - LABEL_STUDIO_USER_TOKEN=ab9927067c51ff279d340d7321e4890dc2841c4a
+      - POSTGRES_HOST=app-db
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=appdb
+    networks:
+      - production_net
+
+  jupyter:
+    image: quay.io/jupyter/minimal-notebook:latest
+    container_name: jupyter
+    ports:
+      - "8888:8888"
+    volumes:
+      - /home/cc/eval-loop-chi/workspace:/home/jovyan/work # mount workspace
+    environment:
+      - MINIO_URL=http://minio:9000 # let Flask app know where to access the object store
+      - MINIO_USER=your-access-key
+      - MINIO_PASSWORD=your-secret-key
+      - LABEL_STUDIO_URL=http://label-studio:8080
+      - LABEL_STUDIO_USER_TOKEN=ab9927067c51ff279d340d7321e4890dc2841c4a
+    networks:
+      - production_net
+    command: >
+      bash -c "python3 -m pip install boto3 && start-notebook.sh"
+
+networks:
+  production_net:
+    external: true

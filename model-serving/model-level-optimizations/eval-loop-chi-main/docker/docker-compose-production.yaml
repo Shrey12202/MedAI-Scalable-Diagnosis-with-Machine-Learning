@@ -1,0 +1,69 @@
+name: production
+
+services:
+  fastapi_server:
+    build:
+      context: /home/cc/eval-loop-chi/fastapi_pt
+      dockerfile: Dockerfile
+    container_name: fastapi_server
+    ports:
+      - "8000:8000"  # for HTTP requests
+    networks:
+      - production_net
+    depends_on:
+      - minio
+
+  flask:
+    build:
+      context: https://github.com/teaching-on-testbeds/gourmetgram.git#production
+      dockerfile: Dockerfile
+    container_name: flask
+    ports:
+      - "5000:5000"
+    environment:
+      - FASTAPI_SERVER_URL=http://fastapi_server:8000 # let Flask app know where to access the inference endpoint
+      - MINIO_URL=http://minio:9000 # let Flask app know where to access the object store
+      - MINIO_USER=your-access-key
+      - MINIO_PASSWORD=your-secret-key
+    networks:
+      - production_net
+    depends_on:
+      - fastapi_server
+      - minio
+
+  minio:
+    image: minio/minio
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=your-access-key
+      - MINIO_ROOT_PASSWORD=your-secret-key
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ':9001'
+    networks:
+      - production_net
+
+  minio-init:
+    image: minio/mc
+    container_name: minio_init
+    depends_on:
+      - minio
+    restart: "no"
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5 &&
+      mc alias set myminio http://minio:9000 your-access-key your-secret-key &&
+      mc mb -p myminio/production || echo 'Bucket already exists'
+      "
+    networks:
+      - production_net
+
+networks:
+  production_net:
+    external: true
+
+volumes:
+  minio_data:
