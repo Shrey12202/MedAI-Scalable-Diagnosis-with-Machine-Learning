@@ -1,1 +1,54 @@
+---
+- name: Configure Docker Setup
+  hosts: node1,node2,node3
+  become: yes
+
+  tasks:
+    - name: Ensure Docker is installed
+      package:
+        name: docker
+        state: present
+
+    - name: Configure Docker daemon.json for insecure registry
+      copy:
+        dest: /etc/docker/daemon.json
+        content: |
+          {
+            "registry-mirrors": ["http://registry.medai-system.svc.cluster.local:5000"],
+            "insecure-registries": ["registry.medai-system.svc.cluster.local:5000"]
+          }
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Restart Docker service to apply changes
+      systemd:
+        name: docker
+        state: restarted
+        enabled: yes
+
+    - name: Add user 'cc' to docker group
+      user:
+        name: cc
+        groups: docker
+        append: yes
+
+    - name: Verify Docker group membership for user 'cc'
+      command: id cc
+      register: cc_id
+
+    - name: Show user groups
+      debug:
+        msg: "{{ cc_id.stdout }}"
+
+    - name: Enable Docker on boot
+      systemd:
+        name: docker
+        enabled: yes
+
+    - name: Ensure Docker service is running
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
 
