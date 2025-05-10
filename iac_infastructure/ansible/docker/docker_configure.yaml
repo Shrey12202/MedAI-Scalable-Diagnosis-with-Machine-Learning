@@ -1,21 +1,5 @@
 ---
-- name: Disable and Mask firewalld
-  hosts: all
-  become: yes
-
-  tasks:
-    - name: Stop firewalld service
-      systemd:
-        name: firewalld
-        state: stopped
-        enabled: no
-
-    - name: Mask firewalld service
-      systemd:
-        name: firewalld
-        masked: yes
-
-- name: Set up insecure registry for Docker
+- name: Docker Configuration Setup
   hosts: node1,node2,node3
   become: yes
 
@@ -23,7 +7,6 @@
     insecure_registry: "registry.medai-system.svc.cluster.local:5000"
 
   tasks:
-
     - name: Ensure /etc/docker directory exists
       file:
         path: /etc/docker
@@ -48,35 +31,22 @@
         group: root
         mode: '0644'
 
-    - name: Restart Docker to apply changes
+    - name: Restart Docker service to apply changes
       systemd:
         name: docker
         state: restarted
+        enabled: yes
 
-    - name: Enable Docker on boot
+    - name: Enable Docker service on boot
       systemd:
         name: docker
         enabled: yes
 
-- name: Add User to Docker Group
-  hosts: node1,node2,node3
-  become: yes
-
-  vars:
-    ansible_user: cc
-
-  tasks:
-    - name: Add user 'cc' to docker group
+    - name: Add user 'cc' to Docker group
       user:
         name: cc
         groups: docker
         append: yes
-
-    - name: Restart Docker
-      systemd:
-        name: docker
-        state: restarted
-        enabled: yes
 
     - name: Verify Docker group membership for user 'cc'
       command: id cc
@@ -86,3 +56,10 @@
       debug:
         msg: "{{ cc_id.stdout }}"
 
+    - name: Verify Docker installation
+      command: docker --version
+      register: docker_version
+
+    - name: Show Docker version
+      debug:
+        msg: "Docker version: {{ docker_version.stdout }}"
