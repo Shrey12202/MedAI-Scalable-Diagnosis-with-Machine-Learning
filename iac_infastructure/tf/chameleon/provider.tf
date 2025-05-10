@@ -1,1 +1,3 @@
-
+provider "openstack" {
+  cloud = "openstack"
+}
