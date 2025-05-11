@@ -1,5 +1,0 @@
-apiVersion: v2
-name: gourmetgram-canary
-version: 1.0.0
-description: Gourmetgram Canary Deployment
-
