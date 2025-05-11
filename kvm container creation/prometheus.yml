@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 10s
+
+scrape_configs:
+  - job_name: 'mlflow'
+    static_configs:
+      - targets: ['129.114.26.3:8000']
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'chexpert_training_pushgateway'
+    honor_labels: true
+    static_configs:
+      - targets: ['pushgateway:9091']
