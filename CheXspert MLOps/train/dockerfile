@@ -1,0 +1,30 @@
+FROM pytorch/pytorch:2.1.0-cuda11.8-cudnn8-runtime
+
+# Install required dependencies
+RUN apt-get update && apt-get install -y git curl libgl1-mesa-glx
+
+RUN pip install --upgrade pip
+RUN pip install \
+    pandas \
+    torch \
+    numpy \
+    scikit-learn \
+    torchvision \
+    matplotlib \
+    mlflow \
+    boto3 \
+    prometheus_client \
+    tqdm \
+    pillow
+
+# Set environment variables (can also be set at runtime)
+ENV MLFLOW_TRACKING_URI=http://129.114.26.3:8000
+ENV MLFLOW_S3_ENDPOINT_URL=http://129.114.26.3:9001
+ENV AWS_ACCESS_KEY_ID=minioadmin
+ENV AWS_SECRET_ACCESS_KEY=minioadmin
+
+
+WORKDIR /workspace
+COPY . /workspace
+
+CMD ["python", "train.py"]
