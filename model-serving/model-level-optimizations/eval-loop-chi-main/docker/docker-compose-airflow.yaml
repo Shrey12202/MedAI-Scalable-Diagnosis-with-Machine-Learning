@@ -33,7 +33,7 @@ services:
       - MINIO_USER=your-access-key
       - MINIO_PASSWORD=your-secret-key
     volumes:
-      - /home/cc/eval-loop-chi/dags:/opt/airflow/dags
+      - /home/cc/eval-loop-chi-main/dags:/opt/airflow/dags
       - airflow_shared:/opt/airflow
     depends_on:
       airflow-setup:
@@ -58,7 +58,7 @@ services:
       - MINIO_USER=your-access-key
       - MINIO_PASSWORD=your-secret-key
     volumes:
-      - /home/cc/eval-loop-chi/dags:/opt/airflow/dags
+      - /home/cc/eval-loop-chi-main/dags:/opt/airflow/dags
       - airflow_shared:/opt/airflow
     depends_on:
       airflow-setup:
@@ -78,7 +78,7 @@ services:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://user:password@postgres/postgres
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
     volumes:
-      - /home/cc/eval-loop-chi/dags:/opt/airflow/dags
+      - /home/cc/eval-loop-chi-main/dags:/opt/airflow/dags
       - airflow_shared:/opt/airflow
     networks:
       - production_net

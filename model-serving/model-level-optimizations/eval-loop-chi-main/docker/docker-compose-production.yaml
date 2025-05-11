@@ -3,7 +3,7 @@ name: production
 services:
   fastapi_server:
     build:
-      context: /home/cc/eval-loop-chi/fastapi_pt
+      context: /home/cc/eval-loop-chi-main/fastapi_pt
       dockerfile: Dockerfile
     container_name: fastapi_server
     ports:

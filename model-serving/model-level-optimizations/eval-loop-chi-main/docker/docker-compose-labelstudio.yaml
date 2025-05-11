@@ -6,7 +6,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - /home/cc/eval-loop-chi/scripts:/label-studio/scripts
+      - /home/cc/eval-loop-chi-main/scripts:/label-studio/scripts
     environment:
       - LABEL_STUDIO_URL=http://label-studio:8080
       - LABEL_STUDIO_USERNAME=labelstudio@example.com
@@ -26,7 +26,7 @@ services:
     ports:
       - "8888:8888"
     volumes:
-      - /home/cc/eval-loop-chi/workspace:/home/jovyan/work # mount workspace
+      - /home/cc/eval-loop-chi-main/workspace:/home/jovyan/work # mount workspace
     environment:
       - MINIO_URL=http://minio:9000 # let Flask app know where to access the object store
       - MINIO_USER=your-access-key
