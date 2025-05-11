@@ -166,24 +166,27 @@ def create_label_studio_project(**context):
 
     label_config = """
     <View>
-      <Image name="image" value="$image" maxWidth="500px"/>
-      <Choices name="label" toName="image" choice="single" showInLine="true" >
-        <Choice value="Bread"/>
-        <Choice value="Dairy product"/>
-        <Choice value="Dessert"/>
-        <Choice value="Egg"/>
-        <Choice value="Fried food"/>
-        <Choice value="Meat"/>
-        <Choice value="Noodles/Pasta"/>
-        <Choice value="Rice"/>
-        <Choice value="Seafood"/>
-        <Choice value="Soup"/>
-        <Choice value="Vegetable/Fruit"/>
-      </Choices>
-      <Header value="Model Confidence: $confidence"/>
-      <Header value="Predicted Class: $predicted_class"/>
-      <Header value="Corrected Class: $corrected_class"/>
+    <Image name="image" value="$image" maxWidth="500px"/>
+    <Labels name="label" toName="image">
+        <Label value="Atelectasis"/>
+        <Label value="Cardiomegaly"/>
+        <Label value="Consolidation"/>
+        <Label value="Edema"/>
+        <Label value="Enlarged Cardiomediastinum"/>
+        <Label value="Fracture"/>
+        <Label value="Lung Lesion"/>
+        <Label value="Lung Opacity"/>
+        <Label value="No Finding"/>
+        <Label value="Pleural Effusion"/>
+        <Label value="Pleural Other"/>
+        <Label value="Pneumonia"/>
+        <Label value="Pneumothorax"/>
+    </Labels>
+    <Header value="Model Confidence: $confidence"/>
+    <Header value="Predicted Class(es): $predicted_class"/>
+    <Header value="Corrected Class(es): $corrected_class"/>
     </View>
+
     """
     payload = {
         "title": PROJECT_NAME,

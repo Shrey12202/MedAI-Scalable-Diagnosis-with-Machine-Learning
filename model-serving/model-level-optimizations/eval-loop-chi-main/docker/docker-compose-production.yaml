@@ -15,7 +15,7 @@ services:
 
   flask:
     build:
-      context: https://github.com/teaching-on-testbeds/gourmetgram.git#production
+      context: https://github.com/ShabadVaswani/chexpert-app-master
       dockerfile: Dockerfile
     container_name: flask
     ports:

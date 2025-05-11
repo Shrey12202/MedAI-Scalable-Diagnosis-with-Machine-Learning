@@ -55,10 +55,21 @@ def process_labeled_data_minio(**context):
     completed_tasks = context['ti'].xcom_pull(key='completed_tasks', task_ids='get_label_studio_results')
 
     CLASSES = [
-        "Bread", "Dairy product", "Dessert", "Egg", "Fried food",
-        "Meat", "Noodles/Pasta", "Rice", "Seafood", "Soup",
-        "Vegetable/Fruit"
+        "Atelectasis",
+        "Cardiomegaly",
+        "Consolidation",
+        "Edema",
+        "Enlarged Cardiomediastinum",
+        "Fracture",
+        "Lung Lesion",
+        "Lung Opacity",
+        "No Finding",
+        "Pleural Effusion",
+        "Pleural Other",
+        "Pneumonia",
+        "Pneumothorax"
     ]
+
 
     for task in completed_tasks:
         try:

@@ -26,7 +26,6 @@ class PredictionResponse(BaseModel):
 # Set device (GPU if available, otherwise CPU)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Load the Food11 model
 MODEL_PATH = "best_model.pth"
 model = torch.load(MODEL_PATH, map_location=device, weights_only=False)
 model.to(device)
