@@ -43,7 +43,7 @@ resource "openstack_compute_instance_v2" "nodes" {
   name        = "${each.key}-mlops-${var.suffix}"
   image_name  = "CC-Ubuntu24.04"
   flavor_name = "m1.medium"
-  key_pair    = var.key
+  key_pair    = var.key_name
 
   network {
     port = openstack_networking_port_v2.sharednet2_ports[each.key].id
