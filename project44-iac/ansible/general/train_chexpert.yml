@@ -22,17 +22,17 @@
         update: yes
 
     - name: Build Docker Image for CheXpert
-      shell: docker build -t chexpert-train /home/cc/MedAI-Scalable-Diagnosis-with-Machine-Learning/CheXspert\ MLOps/train
+      shell: docker build -t chexpert-train "/home/cc/MedAI-Scalable-Diagnosis-with-Machine-Learning/CheXspert MLOps/train"
       args:
         executable: /bin/bash
 
     - name: Run CheXpert Training Container
       shell: >
         docker run --shm-size=16g \
-          -v /home/cc/MedAI-Scalable-Diagnosis-with-Machine-Learning/CheXspert\ MLOps/train:/workspace \
+          -v "/home/cc/MedAI-Scalable-Diagnosis-with-Machine-Learning/CheXspert MLOps/train:/workspace" \
           -v /mnt/object:/mnt/object \
           -v /mnt/persistent:/mnt/persistent \
           -e MLFLOW_TRACKING_URI=http://{{ ansible_host }}:8000 \
           chexpert-train
       args:
-        executable: /bin/bash
+        executable: /bin/bash
