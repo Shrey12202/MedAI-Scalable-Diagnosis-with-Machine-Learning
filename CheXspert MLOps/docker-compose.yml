@@ -1,0 +1,29 @@
+version: "3.9"
+
+services:
+  chexpert-api:
+    build: ./app
+    container_name: chexpert-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - /mnt/object/processed/processed_images:/mnt/object/processed/processed_images
+      - /mnt/persistent:/mnt/persistent
+    environment:
+      - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    restart: unless-stopped
+
+  # Optional: training container
+  chexpert-trainer:
+    build: ./train
+    container_name: chexpert-trainer
+    volumes:
+      - /mnt/object/processed/processed_images:/mnt/object/processed/processed_images
+      - /mnt/persistent:/mnt/persistent
+    environment:
+      - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    entrypoint: ["python", "train.py"]

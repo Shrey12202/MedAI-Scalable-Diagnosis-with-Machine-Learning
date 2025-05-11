@@ -1,0 +1,63 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio-credentials
+  namespace: project44-platform
+type: Opaque
+stringData:
+  accesskey: project44admin
+  secretkey: project44secret
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: project44-mlflow
+  namespace: project44-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: project44-mlflow
+  template:
+    metadata:
+      labels:
+        app: project44-mlflow
+    spec:
+      containers:
+        - name: mlflow
+          image: shabadvaswani/project44-mlflow:latest
+          ports:
+            - containerPort: 5000
+          env:
+            - name: MLFLOW_TRACKING_URI
+              value: http://0.0.0.0:5000
+            - name: BACKEND_STORE_URI
+              value: postgresql://project44_user:project44_pass@project44-db:5432/project44_mlflow
+            - name: ARTIFACT_ROOT
+              value: s3://project44-artifacts
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: minio-credentials
+                  key: accesskey
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-credentials
+                  key: secretkey
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: project44-mlflow
+  namespace: project44-platform
+spec:
+  type: ClusterIP
+  selector:
+    app: project44-mlflow
+  ports:
+    - port: 5000
+      targetPort: 5000

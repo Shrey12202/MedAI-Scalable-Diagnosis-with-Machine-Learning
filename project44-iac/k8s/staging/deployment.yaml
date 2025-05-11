@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: project44-api-staging
+  namespace: project44-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: project44-api-staging
+  template:
+    metadata:
+      labels:
+        app: project44-api-staging
+    spec:
+      containers:
+        - name: project44-api
+          image: shabadvaswani/project44-api:latest
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: version-volume
+              mountPath: /app/versions.txt
+              subPath: versions.txt
+          readinessProbe:
+            httpGet:
+              path: /version
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /version
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20
+      volumes:
+        - name: version-volume
+          configMap:
+            name: project44-version-cm
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: project44-api-staging
+  namespace: project44-staging
+spec:
+  selector:
+    app: project44-api-staging
+  ports:
+    - port: 8081
+      targetPort: 8080
+  type: ClusterIP# ============================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: project44-api-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: project44-api-staging
+  template:
+    metadata:
+      labels:
+        app: project44-api-staging
+    spec:
+      containers:
+        - name: project44-api
+          image: shabadvaswani/project44-api:latest
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: version-volume
+              mountPath: /app/versions.txt
+              subPath: versions.txt
+      volumes:
+        - name: version-volume
+          configMap:
+            name: project44-version-cm
