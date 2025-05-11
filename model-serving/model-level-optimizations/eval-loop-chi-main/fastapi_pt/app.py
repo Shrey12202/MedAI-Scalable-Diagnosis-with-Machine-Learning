@@ -11,8 +11,8 @@ import numpy as np
 from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI(
-    title="Food Classification API",
-    description="API for classifying food items from images",
+    title="Chexpert Classification API",
+    description="API for classifying diseases from x-ray images",
     version="1.0.0"
 )
 # Define the request and response models
@@ -27,14 +27,29 @@ class PredictionResponse(BaseModel):
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Load the Food11 model
-MODEL_PATH = "food11.pth"
+MODEL_PATH = "best_model.pth"
 model = torch.load(MODEL_PATH, map_location=device, weights_only=False)
 model.to(device)
 model.eval()
 
 # Define class labels
-classes = np.array(["Bread", "Dairy product", "Dessert", "Egg", "Fried food",
-    "Meat", "Noodles/Pasta", "Rice", "Seafood", "Soup", "Vegetable/Fruit"])
+classes = np.array([
+    "No Finding",
+    "Enlarged Cardiomediastinum",
+    "Cardiomegaly",
+    "Lung Opacity",
+    "Lung Lesion",
+    "Edema",
+    "Consolidation",
+    "Pneumonia",
+    "Atelectasis",
+    "Pneumothorax",
+    "Pleural Effusion",
+    "Pleural Other",
+    "Fracture",
+    "Support Devices"
+])
+
 
 # Define the image preprocessing function
 def preprocess_image(img):
