@@ -1,16 +1,33 @@
-# app/Dockerfile
-FROM python:3.9-slim
+FROM pytorch/pytorch:2.1.0-cuda11.8-cudnn8-runtime
 
-WORKDIR /app
-COPY . /app
+# Install required dependencies
+RUN apt-get update && apt-get install -y git curl libgl1-mesa-glx
 
-RUN pip install --no-cache-dir \
-    fastapi \
-    uvicorn \
-    pillow \
+RUN pip install --upgrade pip
+RUN pip install \
+    pandas \
     torch \
+    numpy \
+    scikit-learn \
     torchvision \
+    matplotlib \
     mlflow \
-    jinja2
+    boto3 \
+    prometheus_client \
+    tqdm \
+    pillow \
+    streamlit \
+    requests
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Set environment variables for MLflow + MinIO access
+ENV MLFLOW_TRACKING_URI=http://129.114.26.3:8000
+ENV MLFLOW_S3_ENDPOINT_URL=http://129.114.26.3:9001
+ENV AWS_ACCESS_KEY_ID=minioadmin
+ENV AWS_SECRET_ACCESS_KEY=minioadmin
+
+# Copy app code
+WORKDIR /workspace
+COPY . /workspace
+
+# Run Streamlit app
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
