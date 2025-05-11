@@ -3,10 +3,28 @@
   hosts: all
   become: yes
   tasks:
-    - name: Ensure Docker is running
+    - name: Ensure Docker is installed
+      apt:
+        name: docker.io
+        state: present
+        update_cache: true
+
+    - name: Ensure Docker service is running
       service:
         name: docker
         state: started
+        enabled: true
+
+    - name: Clone training repo if not exists
+      git:
+        repo: https://github.com/Shrey12202/MedAI-Scalable-Diagnosis-with-Machine-Learning.git
+        dest: /home/cc/MedAI-Scalable-Diagnosis-with-Machine-Learning
+        update: yes
+
+    - name: Build Docker Image for CheXpert
+      shell: docker build -t chexpert-train /home/cc/MedAI-Scalable-Diagnosis-with-Machine-Learning/CheXspert\ MLOps/train
+      args:
+        executable: /bin/bash
 
     - name: Run CheXpert Training Container
       shell: >
@@ -14,5 +32,7 @@
           -v /home/cc/MedAI-Scalable-Diagnosis-with-Machine-Learning/CheXspert\ MLOps/train:/workspace \
           -v /mnt/object:/mnt/object \
           -v /mnt/persistent:/mnt/persistent \
-          -e MLFLOW_TRACKING_URI=http://<FLOATING_IP>:8000 \
+          -e MLFLOW_TRACKING_URI=http://{{ ansible_host }}:8000 \
           chexpert-train
+      args:
+        executable: /bin/bash
