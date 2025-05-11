@@ -87,19 +87,24 @@ class CheXpertDataset(Dataset):
     def __len__(self):
         return len(self.df)
 
-    def __getitem__(self, idx):
-        rel_path = self.image_paths[idx]  # e.g., "patient123/study1/view1_frontal.jpg"
-        img_path = os.path.join(self.root_dir, rel_path).replace(".jpg", ".png")
-        if not os.path.exists(img_path):
-            raise FileNotFoundError(f"Image not found: {img_path}")
-
-        image = Image.open(img_path).convert("RGB")
-
+    def _getitem_(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+    
+        row = self.df.iloc[idx]
+        img_path = os.path.join(self.img_root, row['Path'])
+    
+        if not os.path.isfile(img_path):
+            print(f"⚠ Skipping missing image: {img_path}")
+            return self._getitem_((idx + 1) % len(self.df))  # Skip to next index safely
+    
+        image = Image.open(img_path).convert('RGB')
         if self.transform:
             image = self.transform(image)
-
-        label = self.labels[idx]
-        return image, torch.tensor(label, dtype=torch.float32)
+    
+        labels = row[self.label_cols].values.astype(np.float32)
+        labels = np.nan_to_num(labels, nan=0.0)
+        return image, torch.tensor(labels)
 
 # -----------------------
 # Model
