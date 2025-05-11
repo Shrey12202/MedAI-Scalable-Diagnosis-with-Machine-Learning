@@ -162,7 +162,7 @@ with training_duration.time():
             if latest_versions:
                 latest_model_uri = f"models:/{model_name}/{latest_versions[0].version}"
                 print(f"🔄 Loading model weights from {latest_model_uri}")
-                model = mlflow.pytorch.load_model(latest_model_uri).to(DEVICE)
+                model = mlflow.pytorch.load_model(latest_model_uri, map_location=torch.device("cpu")).to(DEVICE)
             else:
                 print("⚠️ No previous model version found. Starting fresh.")
         except RestException:
@@ -478,7 +478,7 @@ with training_duration.time():
             if latest_versions:
                 latest_model_uri = f"models:/{model_name}/{latest_versions[0].version}"
                 print(f"🔄 Loading model weights from {latest_model_uri}")
-                model = mlflow.pytorch.load_model(latest_model_uri).to(DEVICE)
+                model = mlflow.pytorch.load_model(latest_model_uri, map_location=torch.device("cpu")).to(DEVICE)
             else:
                 print("⚠️ No previous model version found. Starting fresh.")
         except RestException:
@@ -794,7 +794,7 @@ with training_duration.time():
             if latest_versions:
                 latest_model_uri = f"models:/{model_name}/{latest_versions[0].version}"
                 print(f"🔄 Loading model weights from {latest_model_uri}")
-                model = mlflow.pytorch.load_model(latest_model_uri).to(DEVICE)
+                model = mlflow.pytorch.load_model(latest_model_uri, map_location=torch.device("cpu")).to(DEVICE)
             else:
                 print("⚠️ No previous model version found. Starting fresh.")
         except RestException:
