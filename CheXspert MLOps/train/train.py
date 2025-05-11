@@ -15,12 +15,13 @@ from mlflow.exceptions import RestException
 import json
 from tqdm import tqdm
 import numpy as np
+from torchmetrics.classification import MultilabelF1Score, MultilabelPrecision, MultilabelRecall, MultilabelAccuracy
 from sklearn.metrics import precision_score, recall_score, f1_score
 from prometheus_client import start_http_server, Gauge, Summary, CollectorRegistry, Gauge, push_to_gateway
 
 # Set remote MLflow and MinIO endpoints
-MLFLOW_TRACKING_URI = "http://129.114.26.3:8000"
-MINIO_ENDPOINT = "http://129.114.26.3:9001"
+MLFLOW_TRACKING_URI = "http://129.114.27.181:8000"
+MINIO_ENDPOINT = "http://129.114.27.181:9001"
 
 # 🔹 Set MLflow tracking URI
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
@@ -51,8 +52,8 @@ LEARNING_RATE = 1e-4
 NUM_CLASSES = 14
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-TRAIN_CSV = "train.csv"
-TEST_CSV = "test.csv"
+TRAIN_CSV = "/mnt/object/csv/New_Data-Split-project44/train.csv"
+TEST_CSV = "/mnt/object/csv/New_Data-Split-project44/test.csv"
 IMG_ROOT = "/mnt/object/processed/processed_images" # Current dir includes CheXpert-v1.0/
 
 LABELS = [
@@ -64,18 +65,10 @@ LABELS = [
 # -----------------------
 # Log Metrics
 # -----------------------
-def log_metrics_to_mlflow_and_prometheus(epoch, stage, metrics_dict):
-    # Log to MLflow
+def log_metrics_to_mlflow_only(epoch, stage, metrics_dict):
     for key, value in metrics_dict.items():
         mlflow.log_metric(f"{stage}_{key}", value, step=epoch)
 
-    # Log to Prometheus PushGateway
-    registry = CollectorRegistry()
-    for key, value in metrics_dict.items():
-        g = Gauge(f"{stage}_{key}", f"{stage.capitalize()} {key}", registry=registry)
-        g.set(value)
-
-    push_to_gateway("129.114.26.3:9091", job="chexpert_training", registry=registry)
 
 # -----------------------
 # Dataset
@@ -151,7 +144,6 @@ test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE, num_workers=6)
 # -----------------------
 with training_duration.time():
     with mlflow.start_run():
-        # 🔹 Log hyperparameters
         mlflow.log_param("batch_size", BATCH_SIZE)
         mlflow.log_param("epochs", EPOCHS)
         mlflow.log_param("learning_rate", LEARNING_RATE)
@@ -161,16 +153,14 @@ with training_duration.time():
         model = CheXpertModel(NUM_CLASSES).to(DEVICE)
 
         try:
-        # Check if a version of the model exists in MLflow
             latest_versions = client.get_latest_versions(model_name)
             if latest_versions:
-                # Get the latest model version URI
                 latest_model_uri = f"models:/{model_name}/{latest_versions[0].version}"
                 print(f"🔄 Loading model weights from {latest_model_uri}")
                 model = mlflow.pytorch.load_model(latest_model_uri).to(DEVICE)
             else:
                 print("⚠️ No previous model version found. Starting fresh.")
-        except RestException as e:
+        except RestException:
             print(f"⚠️ MLflow model {model_name} not found. Starting fresh.")
 
         optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
@@ -180,14 +170,23 @@ with training_duration.time():
         best_val_loss = float("inf")
         best_model_path = "best_model.pth"
 
+        # 🔹 Initialize torchmetrics (GPU-ready)
+        metric_args = {"num_labels": NUM_CLASSES, "threshold": 0.5}
+        train_f1_metric = MultilabelF1Score(**metric_args).to(DEVICE)
+        train_precision_metric = MultilabelPrecision(**metric_args).to(DEVICE)
+        train_recall_metric = MultilabelRecall(**metric_args).to(DEVICE)
+        train_accuracy_metric = MultilabelAccuracy(**metric_args).to(DEVICE)
+
+        val_f1_metric = MultilabelF1Score(**metric_args).to(DEVICE)
+        val_precision_metric = MultilabelPrecision(**metric_args).to(DEVICE)
+        val_recall_metric = MultilabelRecall(**metric_args).to(DEVICE)
+        val_accuracy_metric = MultilabelAccuracy(**metric_args).to(DEVICE)
+
         for epoch in range(EPOCHS):
-            # ---- Training Phase ----
+            # ---- Training ----
             model.train()
             total_loss = 0
             progress_bar = tqdm(train_loader, desc=f"🔁 Epoch {epoch+1}", unit="batch")
-
-            train_preds = []
-            train_targets = []
 
             for imgs, labels in progress_bar:
                 imgs, labels = imgs.to(DEVICE), labels.to(DEVICE)
@@ -196,23 +195,22 @@ with training_duration.time():
                 loss = criterion(outputs, labels)
                 loss.backward()
                 optimizer.step()
+
                 total_loss += loss.item()
-                
-                preds = torch.sigmoid(outputs).detach().cpu().numpy() >= 0.5
-                train_preds.extend(preds)
-                train_targets.extend(labels.cpu().numpy())
+
+                preds = torch.sigmoid(outputs)
+                train_f1_metric.update(preds, labels.int())
+                train_precision_metric.update(preds, labels.int())
+                train_recall_metric.update(preds, labels.int())
+                train_accuracy_metric.update(preds, labels.int())
 
                 progress_bar.set_postfix(loss=loss.item())
 
             avg_train_loss = total_loss / len(train_loader)
-            print(f"[Epoch {epoch+1}] Train Loss: {avg_train_loss:.4f}")
-            
-            train_preds = np.array(train_preds)
-            train_targets = np.array(train_targets)
-            train_accuracy = (train_preds == train_targets).mean()
-            train_precision = precision_score(train_targets, train_preds, average='micro', zero_division=0)
-            train_recall = recall_score(train_targets, train_preds, average='micro', zero_division=0)
-            train_f1 = f1_score(train_targets, train_preds, average='micro', zero_division=0)
+            train_f1 = train_f1_metric.compute().item()
+            train_precision = train_precision_metric.compute().item()
+            train_recall = train_recall_metric.compute().item()
+            train_accuracy = train_accuracy_metric.compute().item()
 
             log_metrics_to_mlflow_and_prometheus(epoch, "train", {
                 "loss": avg_train_loss,
@@ -221,47 +219,39 @@ with training_duration.time():
                 "recall": train_recall,
                 "f1": train_f1
             })
-
             train_loss_metric.set(avg_train_loss)
 
+            train_f1_metric.reset()
+            train_precision_metric.reset()
+            train_recall_metric.reset()
+            train_accuracy_metric.reset()
 
             scheduler.step(avg_train_loss)
 
-            # ---- Validation Phase ----
+            # ---- Validation ----
             model.eval()
             val_loss = 0
-            correct = 0
-            total = 0
-            val_preds = []
-            val_targets = []    
-
             with torch.no_grad():
                 progress_bar = tqdm(val_loader, desc=f"🔁 Epoch {epoch+1}", unit="batch")
-    
                 for imgs, labels in progress_bar:
                     imgs, labels = imgs.to(DEVICE), labels.to(DEVICE)
                     outputs = model(imgs)
                     loss = criterion(outputs, labels)
                     val_loss += loss.item()
 
-                    preds = torch.sigmoid(outputs).detach().cpu().numpy() >= 0.5
-                    val_preds.extend(preds)
-                    val_targets.extend(labels.cpu().numpy())
-                    
-                    correct += (preds == labels.cpu().numpy()).sum().item()
-                    total += preds.size
+                    preds = torch.sigmoid(outputs)
+                    val_f1_metric.update(preds, labels.int())
+                    val_precision_metric.update(preds, labels.int())
+                    val_recall_metric.update(preds, labels.int())
+                    val_accuracy_metric.update(preds, labels.int())
+
                     progress_bar.set_postfix(loss=loss.item())
 
             avg_val_loss = val_loss / len(val_loader)
-            val_accuracy = correct / total
-            print(f"[Epoch {epoch+1}] Val Loss: {avg_val_loss:.4f}, Val Acc: {val_accuracy:.4f}")
-
-            val_preds = np.array(val_preds)
-            val_targets = np.array(val_targets)
-            val_accuracy = (val_preds == val_targets).mean()
-            val_precision = precision_score(val_targets, val_preds, average='micro', zero_division=0)
-            val_recall = recall_score(val_targets, val_preds, average='micro', zero_division=0)
-            val_f1 = f1_score(val_targets, val_preds, average='micro', zero_division=0)
+            val_f1 = val_f1_metric.compute().item()
+            val_precision = val_precision_metric.compute().item()
+            val_recall = val_recall_metric.compute().item()
+            val_accuracy = val_accuracy_metric.compute().item()
 
             log_metrics_to_mlflow_and_prometheus(epoch, "val", {
                 "loss": avg_val_loss,
@@ -270,24 +260,21 @@ with training_duration.time():
                 "recall": val_recall,
                 "f1": val_f1
             })
-                        
             val_loss_metric.set(avg_val_loss)
 
+            val_f1_metric.reset()
+            val_precision_metric.reset()
+            val_recall_metric.reset()
+            val_accuracy_metric.reset()
 
-            # Save best model
             if avg_val_loss < best_val_loss:
                 best_val_loss = avg_val_loss
                 torch.save(model.state_dict(), best_model_path)
                 print(f"✅ Saved best model at epoch {epoch+1} (Val Loss: {avg_val_loss:.4f}, Acc: {val_accuracy:.4f})")
 
-        # 🔹 Log final artifacts
-        # Load best weights back into the model
+        # 🔹 Log final model to MLflow
         model.load_state_dict(torch.load(best_model_path))
-        
-        # Log best model in MLflow native format
         mlflow.pytorch.log_model(model, "best_model")
-        
-        # Optional: Register it in the Model Registry
         mlflow.register_model(
             model_uri=f"runs:/{mlflow.active_run().info.run_id}/best_model",
             name="CheXpertBestModel"
@@ -298,29 +285,34 @@ with training_duration.time():
 # -----------------------
 model.load_state_dict(torch.load(best_model_path))
 model.eval()
-model.eval()
+
 test_loss = 0
-test_preds = []
-test_targets = []
+
+# 🔹 Initialize torchmetrics
+metric_args = {"num_labels": NUM_CLASSES, "threshold": 0.5}
+test_f1_metric = MultilabelF1Score(**metric_args).to(DEVICE)
+test_precision_metric = MultilabelPrecision(**metric_args).to(DEVICE)
+test_recall_metric = MultilabelRecall(**metric_args).to(DEVICE)
+test_accuracy_metric = MultilabelAccuracy(**metric_args).to(DEVICE)
 
 with torch.no_grad():
-    for imgs, labels in test_loader:
+    for imgs, labels in tqdm(test_loader, desc="🧪 Test Evaluation", unit="batch"):
         imgs, labels = imgs.to(DEVICE), labels.to(DEVICE)
         outputs = model(imgs)
         loss = criterion(outputs, labels)
         test_loss += loss.item()
 
-        preds = torch.sigmoid(outputs).detach().cpu().numpy() >= 0.5
-        test_preds.extend(preds)
-        test_targets.extend(labels.cpu().numpy())
+        preds = torch.sigmoid(outputs)
+        test_f1_metric.update(preds, labels.int())
+        test_precision_metric.update(preds, labels.int())
+        test_recall_metric.update(preds, labels.int())
+        test_accuracy_metric.update(preds, labels.int())
 
-test_preds = np.array(test_preds)
-test_targets = np.array(test_targets)
-test_accuracy = (test_preds == test_targets).mean()
-test_precision = precision_score(test_targets, test_preds, average='micro', zero_division=0)
-test_recall = recall_score(test_targets, test_preds, average='micro', zero_division=0)
-test_f1 = f1_score(test_targets, test_preds, average='micro', zero_division=0)
 avg_test_loss = test_loss / len(test_loader)
+test_f1 = test_f1_metric.compute().item()
+test_precision = test_precision_metric.compute().item()
+test_recall = test_recall_metric.compute().item()
+test_accuracy = test_accuracy_metric.compute().item()
 
 log_metrics_to_mlflow_and_prometheus(0, "test", {
     "loss": avg_test_loss,
@@ -330,6 +322,6 @@ log_metrics_to_mlflow_and_prometheus(0, "test", {
     "f1": test_f1
 })
 
-print(f"\n Test Accuracy (avg over all labels): {test_accuracy:.4f}")
+print(f"\n✅ Test Accuracy (avg over all labels): {test_accuracy:.4f}")
 
 mlflow.end_run()

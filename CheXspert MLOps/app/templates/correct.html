@@ -2,20 +2,21 @@
 <html>
 <head><title>Correct CheXpert Labels</title></head>
 <body>
-    <h3>Correct Labels for Patient Image</h3>
-    <form action="/correct" method="post">
-        Patient ID: <input name="patient_id"><br>
-        Image Name: <input name="image_name"><br>
-        Sex: <input name="sex"><br>
-        Age: <input name="age"><br>
-        View (Frontal/Lateral): <input name="view"><br>
-        Projection (AP/PA): <input name="projection"><br><br>
+  <h3>Manual Correction</h3>
+  <form action="/correct" method="post">
+    Patient ID: <input name="patient_id"><br>
+    Image Name: <input name="image_name"><br>
+    Sex: <input name="sex"><br>
+    Age: <input name="age" type="number"><br>
+    View: <input name="view"><br>
+    AP/PA: <input name="projection"><br><br>
 
-        {% for label in labels %}
-        <input type="checkbox" name="labels" value="{{ label }}">{{ label }}<br>
-        {% endfor %}
+    <b>Choose present conditions:</b><br>
+    {% for label in labels %}
+      <input type="checkbox" name="labels" value="{{ label }}"> {{ label }}<br>
+    {% endfor %}
 
-        <button type="submit">Submit Correction</button>
-    </form>
+    <br><button type="submit">Submit</button>
+  </form>
 </body>
 </html>
