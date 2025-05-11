@@ -15,6 +15,7 @@ RUN pip install \
     boto3 \
     prometheus_client \
     tqdm \
+    torchmetrics \
     pillow
 
 # Set environment variables (can also be set at runtime)

@@ -47,7 +47,7 @@ os.environ["MINIO_SECRET_ACCESS_KEY"] = "minioadmin"
 # Config
 # -----------------------
 BATCH_SIZE = 128
-EPOCHS = 2
+EPOCHS = 1
 LEARNING_RATE = 1e-4
 NUM_CLASSES = 14
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
