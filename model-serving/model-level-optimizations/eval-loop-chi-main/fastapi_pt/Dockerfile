@@ -14,8 +14,8 @@ COPY . .
 # Ensure model file is available inside the container
 COPY best_model.pth /app/
 
-# Expose FastAPI port
-EXPOSE 8000
+# Expose FastAPI port changed from 8000 to 8500
+EXPOSE 5000
 
 # Command to run FastAPI
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "5000"]

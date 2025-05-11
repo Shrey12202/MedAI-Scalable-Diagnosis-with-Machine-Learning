@@ -30,8 +30,8 @@ services:
       - LABEL_STUDIO_URL=http://label-studio:8080
       - LABEL_STUDIO_USER_TOKEN=ab9927067c51ff279d340d7321e4890dc2841c4a
       - MINIO_URL=http://minio:9000
-      - MINIO_USER=your-access-key
-      - MINIO_PASSWORD=your-secret-key
+      - MINIO_USER=minioadmin
+      - MINIO_PASSWORD=minioadmin
     volumes:
       - /home/cc/eval-loop-chi-main/dags:/opt/airflow/dags
       - airflow_shared:/opt/airflow

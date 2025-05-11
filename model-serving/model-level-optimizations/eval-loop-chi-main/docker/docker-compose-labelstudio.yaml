@@ -29,8 +29,8 @@ services:
       - /home/cc/eval-loop-chi-main/workspace:/home/jovyan/work # mount workspace
     environment:
       - MINIO_URL=http://minio:9000 # let Flask app know where to access the object store
-      - MINIO_USER=your-access-key
-      - MINIO_PASSWORD=your-secret-key
+      - MINIO_USER=minioadmin
+      - MINIO_PASSWORD=minioadmin
       - LABEL_STUDIO_URL=http://label-studio:8080
       - LABEL_STUDIO_USER_TOKEN=ab9927067c51ff279d340d7321e4890dc2841c4a
     networks:
