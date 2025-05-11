@@ -1,1 +1,56 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: promote-model
+spec:
+  entrypoint: promote-flow
+  arguments:
+    parameters:
+      - name: source-environment
+      - name: target-environment
+      - name: model-version
+
+  templates:
+    - name: promote-flow
+      steps:
+        - - name: retag-image
+            template: skopeo-retag
+            arguments:
+              parameters:
+                - name: source-environment
+                  value: "{{workflow.parameters.source-environment}}"
+                - name: target-environment
+                  value: "{{workflow.parameters.target-environment}}"
+                - name: model-version
+                  value: "{{workflow.parameters.model-version}}"
+        - - name: deploy
+            template: trigger-deploy
+            arguments:
+              parameters:
+                - name: environment
+                  value: "{{workflow.parameters.target-environment}}"
+                - name: model-version
+                  value: "{{workflow.parameters.model-version}}"
+        - - name: update-mlflow-alias
+            template: set-mlflow-alias
+            arguments:
+              parameters:
+                - name: model-version
+                  value: "{{workflow.parameters.model-version}}"
+                - name: alias
+                  value: "{{workflow.parameters.target-environment}}"
+
+    - name: skopeo-retag
+      inputs:
+        parameters:
+          - name: source-environment
+          - name: target-environment
+          - name: model-version
+      container:
+        image: quay.io/skopeo/stable
+        command: [sh, -c]
+        args:
+          - |
+            skopeo copy \
+              --src-t
 
