@@ -1,0 +1,18 @@
+---
+- name: Run CheXpert Training Job
+  hosts: all
+  become: yes
+  tasks:
+    - name: Ensure Docker is running
+      service:
+        name: docker
+        state: started
+
+    - name: Run CheXpert Training Container
+      shell: >
+        docker run --shm-size=16g \
+          -v /home/cc/MedAI-Scalable-Diagnosis-with-Machine-Learning/CheXspert\ MLOps/train:/workspace \
+          -v /mnt/object:/mnt/object \
+          -v /mnt/persistent:/mnt/persistent \
+          -e MLFLOW_TRACKING_URI=http://<FLOATING_IP>:8000 \
+          chexpert-train
