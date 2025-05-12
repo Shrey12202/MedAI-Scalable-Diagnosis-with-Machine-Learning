@@ -1,27 +1,16 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, status
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, status
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from prometheus_fastapi_instrumentator import Instrumentator
+from datetime import datetime
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torchvision import models, transforms
 from PIL import Image
-import io
-from prometheus_fastapi_instrumentator import Instrumentator
-import boto3  # ✅ MinIO support
-from datetime import datetime  # ✅ for unique filenames
+import io, json, os
 import boto3
 from botocore.exceptions import NoCredentialsError
-from datetime import datetime
-import json
-import io
-from fastapi import Form
-import os
-from fastapi import Form
-import boto3
-from fastapi import HTTPException
-from fastapi.responses import JSONResponse
-from datetime import datetime
+import mlflow
 
 
 # 🚀 FastAPI App
@@ -30,6 +19,11 @@ app = FastAPI(
     description="Upload X-ray images to predict diseases using a pretrained model.",
     version="2.0.0"
 )
+
+
+
+
+
 
 # ✅ MinIO S3 client setup
 s3 = boto3.client(
@@ -61,12 +55,36 @@ class CheXpertModel(nn.Module):
         return self.model(x)
 
 # 📦 Load model
+# 📦 Load model from MLflow
+from mlflow.tracking import MlflowClient
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-MODEL_PATH = "best_model.pth"
-model = CheXpertModel(num_classes=len(classes))
-model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
-model.to(device)
-model.eval()
+
+try:
+    mlflow.set_tracking_uri("http://localhost:5000")  # Change if using remote MLflow
+
+    client = MlflowClient()
+    exp = client.get_experiment_by_name("chexpert-jupyter")
+
+    if exp is None:
+        raise ValueError("Experiment 'chexpert-jupyter' not found.")
+
+    runs = client.search_runs(exp.experiment_id, filter_string="status = 'FINISHED'")
+    if not runs:
+        raise RuntimeError("No finished runs found in the 'chexpert-jupyter' experiment.")
+
+    latest_run = sorted(runs, key=lambda r: r.info.start_time, reverse=True)[0]
+
+
+    print(f"🔄 Loading model from run {latest_run.info.run_id}")
+    model_uri = f"runs:/{latest_run.info.run_id}/final_model"
+    model = mlflow.pytorch.load_model(model_uri, map_location=device)
+    model.eval()
+
+except Exception as e:
+    print(f"❌ Failed to load model from MLflow: {e}")
+    raise RuntimeError("🔥 Model loading from MLflow failed. Check MLflow tracking URI, run status, or model path.")
+
 
 # 🔄 Preprocessing
 def preprocess_image(img):
@@ -78,6 +96,10 @@ def preprocess_image(img):
                              std=[0.229, 0.224, 0.225]),
     ])
     return transform(img).unsqueeze(0)
+
+
+
+
 
 # 🔍 Predict from uploaded file
 
@@ -139,7 +161,8 @@ async def predict_image(file: UploadFile = File(...)):
             print(f"❌ Failed to save predictions to MinIO: {str(e)}")
             raise
 
-        return result
+        return JSONResponse(status_code=200, content=result)
+
 
     except Exception as e:
         print("🔥 Prediction error:", e)
@@ -183,6 +206,11 @@ async def tag_image(
     except Exception as e:
         print("🔥 Tagging error:", e)
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
 
 
 # 📊 Prometheus metrics
