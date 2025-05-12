@@ -247,3 +247,170 @@ Pipelines)**
 
   - Ensure compliance with **scalability, efficiency, and reliability**
     goals.
+
+#Lightning Presentation - 1
+
+
+#Lightning Presetation - 2
+
+#Final Presentation:
+
+# MedAI: Scalable Diagnosis with Machine Learning
+
+## 🔍 Value Proposition
+
+Our system assists radiologists and medical practitioners by automating the prediction of chest and lung diseases using chest X-ray images. The model enhances diagnostic precision and accelerates patient triage, especially in under-resourced settings.
+
+* **Specific Customer**: Cardiology and radiology departments in hospitals where fast, accurate chest disease detection is critical.
+* **Current Status Quo**: Manual radiographic examination, often delayed or limited by human error or lack of specialists.
+* **ML Benefit**: Provides rapid diagnosis with high consistency, reducing time-to-diagnosis and improving patient outcomes.
+
+---
+
+## 📊 Unit 1: Machine Learning Systems
+
+* ✅ **Scale**:
+
+  * **Data**: Uses the CheXpert dataset (\~10 GB, 224k+ samples). Preprocessing and persistence handled in [`data-persist/`](https://github.com/Shrey12202/MedAI-Scalable-Diagnosis-with-Machine-Learning/tree/main/data-persist).
+  * **Model**: DenseNet-121 with \~8M parameters, handled in [`CheXspert MLOps/`](https://github.com/Shrey12202/MedAI-Scalable-Diagnosis-with-Machine-Learning/tree/main/CheXspert%20MLOps).
+  * **Deployment**: Exposed via REST API with concurrency handled in [`model-serving/api/`](https://github.com/Shrey12202/MedAI-Scalable-Diagnosis-with-Machine-Learning/tree/main/model-serving/api).
+* ✅ **Value Proposition**: See above.
+* ✅ **Outside Materials**:
+
+  * Dataset sourced from Stanford (CheXpert, licensed).
+  * Pretrained ImageNet weights for DenseNet.
+  * PyTorch, MLflow, torchvision libraries used; see [`requirements.txt`](https://github.com/Shrey12202/MedAI-Scalable-Diagnosis-with-Machine-Learning/blob/main/model-serving/api/requirements.txt).
+
+---
+
+## ☁️ Unit 2: Cloud Computing
+
+* ✅ **Infrastructure**: Runs entirely on [Chameleon Cloud](https://www.chameleoncloud.org/).
+
+  * Deployed using Terraform from [`infra/provision/`](https://github.com/Shrey12202/MedAI-Scalable-Diagnosis-with-Machine-Learning/tree/main/infra/provision).
+  * Bootstrapped with Ansible from [`infra/configure/`](https://github.com/Shrey12202/MedAI-Scalable-Diagnosis-with-Machine-Learning/tree/main/infra/configure).
+  * Executed through [`terraform_ansible_runner.py`](https://github.com/Shrey12202/MedAI-Scalable-Diagnosis-with-Machine-Learning/blob/main/infra/terraform_ansible_runner.py).
+* ✅ **Cloud-native Principles**:
+
+  * Containers via Docker (`docker-compose-mlflow.yaml`) for MLflow, inference, monitoring.
+  * Modular design with FastAPI, Prometheus, MinIO, and Grafana microservices.
+
+---
+
+## 🔁 Unit 3: DevOps & Continuous X
+
+* ✅ **Infrastructure as Code**:
+
+  * Infrastructure provisioned using Terraform (`infra/provision/`).
+  * Configuration done through Ansible roles and tasks in (`infra/configure/`).
+* ✅ **Cloud-native Setup**:
+
+  * Services are immutable, stateless, and defined in Git.
+  * Orchestrated using Docker Compose (`docker-compose-mlflow.yaml`).
+* ✅ **CI/CD Pipeline**:
+
+  * Integrated with Airflow DAGs and retraining loops (`airflow/dags/`).
+  * Model retrained and pushed to staging or production after label-based re-evaluation.
+* ✅ **Staged Deployment**:
+
+  * Manual staging using FastAPI for testing.
+  * Canary and Production toggled via LabelStudio + MinIO feedback loop (`model-serving/feedback`).
+
+---
+
+## 🧠 Unit 4: Model Training at Scale
+
+* ✅ **Train and Re-train**:
+
+  * Initial training via [`CheXspert MLOps/train/train.py`](https://github.com/Shrey12202/MedAI-Scalable-Diagnosis-with-Machine-Learning/blob/main/CheXspert%20MLOps/train/train.py).
+  * Re-training triggered through Airflow DAGs using feedback-labeled images.
+* ✅ **Modeling Choices**:
+
+  * DenseNet-121 selected for balance of accuracy and efficiency.
+* 🟨 Difficulty Points:
+
+  * Mixed-precision training enabled for performance.
+  * Ready for distributed training on A100s.
+
+---
+
+## 🧪 Unit 5: Training Infrastructure and Experiment Tracking
+
+* ✅ **Experiment Tracking**:
+
+  * MLflow tracking live on Chameleon, configured in [`docker-compose-mlflow.yaml`](https://github.com/Shrey12202/MedAI-Scalable-Diagnosis-with-Machine-Learning/blob/main/docker-compose-mlflow.yaml).
+  * All experiments tracked through [`train.py`](https://github.com/Shrey12202/MedAI-Scalable-Diagnosis-with-Machine-Learning/blob/main/CheXspert%20MLOps/train/train.py).
+* ✅ **Ray for Scheduling**:
+
+  * Ray cluster used for asynchronous training job queuing.
+* 🟨 Difficulty Points:
+
+  * Ray Tune integrated for HPO (experimental).
+
+---
+
+## 🚀 Unit 6: Model Serving
+
+* ✅ **API Endpoint**:
+
+  * FastAPI backend at [`model-serving/api/main.py`](https://github.com/Shrey12202/MedAI-Scalable-Diagnosis-with-Machine-Learning/blob/main/model-serving/api/main.py) exposes the prediction route.
+* ✅ **Requirements Analysis**:
+
+  * Defined for concurrency, latency (\~<250ms), and batch throughput.
+* ✅ **Model-Level Optimizations**:
+
+  * Graph optimizations and ONNX conversion for performance.
+* ✅ **System Optimizations**:
+
+  * Serving containerized, tested under 2x concurrency using JMeter.
+* 🟨 Difficulty Points:
+
+  * Implemented dual CPU/GPU serving options.
+
+---
+
+## 📈 Unit 7: Evaluation and Monitoring
+
+* ✅ **Offline Evaluation**:
+
+  * Performed during training via `train.py`; logs pushed to MLflow.
+* ✅ **Load Test in Staging**:
+
+  * Prometheus + Grafana dashboard set up.
+  * See configuration in [`prometheus.yml`](https://github.com/Shrey12202/MedAI-Scalable-Diagnosis-with-Machine-Learning/blob/main/prometheus.yml).
+* ✅ **Online Evaluation**:
+
+  * User feedback integration + Label Studio pipeline in [`model-serving/feedback`](https://github.com/Shrey12202/MedAI-Scalable-Diagnosis-with-Machine-Learning/tree/main/model-serving/feedback).
+* ✅ **Close the Loop**:
+
+  * Label Studio + MinIO tags + Airflow DAGs track flagged/low-confidence predictions.
+* ✅ **Business Evaluation**:
+
+  * Hypothetical metric: reduction in misdiagnosis rate / time-to-treatment metrics.
+
+---
+
+## 🛠 Unit 8: Data Pipeline
+
+* ✅ **Persistent Storage**:
+
+  * Mounted via rclone, persistent in [`data-persist`](https://github.com/Shrey12202/MedAI-Scalable-Diagnosis-with-Machine-Learning/tree/main/data-persist).
+* ✅ **Offline Data**:
+
+  * Managed in `train.py`, with data split into train/val/test avoiding leakage.
+* ✅ **ETL Pipeline**:
+
+  * Cleaning and pre-processing performed during ingestion in `train.py`.
+* ✅ **Online Data Simulation**:
+
+  * Real-time user submissions pushed to FastAPI + MinIO and streamed into Airflow DAG.
+* 🟨 Difficulty Points:
+
+  * Custom Prometheus dashboard for label drift in `monitoring/`.
+
+---
+
+## 🧪 How to Run
+
+Follow this pdf: https://github.com/Shrey12202/MedAI-Scalable-Diagnosis-with-Machine-Learning/blob/main/CheXspert%20MLOps/Commands%20to%20follow.pdf
+
