@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  chexspert-trainer:
+    build:
+      context: ./CheXspert MLOps/train-runner
+    container_name: chexspert-trainer
+    cap_add:
+      - SYS_ADMIN
+    devices:
+      - /dev/fuse
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - type: tmpfs
+        target: /mnt/chexspert
+    command: python3 run_training.py
