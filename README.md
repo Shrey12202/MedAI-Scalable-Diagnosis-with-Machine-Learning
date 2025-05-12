@@ -248,10 +248,7 @@ Pipelines)**
   - Ensure compliance with **scalability, efficiency, and reliability**
     goals.
 
-#Lightning Presentation - 1
 
-
-#Lightning Presetation - 2
 
 #Final Presentation:
 
