@@ -1,0 +1,58 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: train-model
+spec:
+  entrypoint: training-and-build
+  arguments:
+    parameters:
+    - name: endpoint-ip
+
+  templates:
+  - name: training-and-build
+    steps:
+      - - name: trigger-training-endpoint
+          template: call-endpoint
+          arguments:
+            parameters:
+            - name: endpoint-ip
+              value: "{{inputs.parameters.endpoint-ip}}"
+      - - name: build-container
+          template: trigger-build
+          arguments:
+            parameters:
+            - name: model-version
+              value: "{{steps.trigger-training-endpoint.outputs.result}}"
+          when: "{{steps.trigger-training-endpoint.outputs.result}} != ''"
+
+  - name: call-endpoint
+    inputs:
+      parameters:
+      - name: endpoint-ip
+    script:
+      image: alpine:3.18
+      command: [sh]
+      source: |
+        apk add --no-cache curl jq > /dev/null
+        RESPONSE=$(curl -s -X POST http://{{inputs.parameters.endpoint-ip}}:9090/trigger-training)
+        VERSION=$(echo $RESPONSE | jq -r '.new_model_version // empty')
+        echo -n $VERSION
+
+  - name: trigger-build
+    inputs:
+      parameters:
+      - name: model-version
+    resource:
+      action: create
+      manifest: |
+        apiVersion: argoproj.io/v1alpha1
+        kind: Workflow
+        metadata:
+          generateName: build-container-image-
+        spec:
+          workflowTemplateRef:
+            name: build-container-image
+          arguments:
+            parameters:
+            - name: model-version
+              value: "{{inputs.parameters.model-version}}"
