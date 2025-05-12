@@ -1,29 +1,119 @@
-version: "3.9"
+version: '3.8'
 
 services:
-  chexpert-api:
-    build: ./app
-    container_name: chexpert-api
+
+  # -------------------
+  # MinIO (Object Store)
+  # -------------------
+  minio:
+    image: minio/minio
+    container_name: minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    env_file:
+      - .env
+    networks:
+      - mlops_net
+
+  minio-create-bucket:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5 &&
+      mc alias set myminio http://minio:9000 $${MINIO_USER} $${MINIO_PASSWORD} &&
+      mc mb -p myminio/production || echo 'Bucket exists'"
+    env_file:
+      - .env
+    networks:
+      - mlops_net
+
+  # -------------------
+  # FastAPI (Model Server)
+  # -------------------
+  fastapi:
+    build: ./model-serving/fastapi
     ports:
       - "8000:8000"
-    volumes:
-      - /mnt/object/processed/processed_images:/mnt/object/processed/processed_images
-      - /mnt/persistent:/mnt/persistent
-    environment:
-      - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - minio
+    networks:
+      - mlops_net
 
-  # Optional: training container
-  chexpert-trainer:
-    build: ./train
-    container_name: chexpert-trainer
+  # -------------------
+  # Jupyter Notebook (Evaluation)
+  # -------------------
+  jupyter:
+    image: jupyter/base-notebook
+    ports:
+      - "8888:8888"
     volumes:
-      - /mnt/object/processed/processed_images:/mnt/object/processed/processed_images
-      - /mnt/persistent:/mnt/persistent
+      - ./notebooks:/home/jovyan/work
+    env_file:
+      - .env
+    networks:
+      - mlops_net
+
+  # -------------------
+  # Label Studio (Human Annotation)
+  # -------------------
+  labelstudio:
+    image: heartexlabs/label-studio:latest
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    networks:
+      - mlops_net
+
+  # -------------------
+  # Airflow (Continuous Pipeline)
+  # -------------------
+  postgres:
+    image: postgres:13
     environment:
-      - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-    entrypoint: ["python", "train.py"]
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    networks:
+      - mlops_net
+
+  airflow:
+    image: apache/airflow:2.7.0
+    container_name: airflow
+    depends_on:
+      - postgres
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./infra/airflow/dags:/opt/airflow/dags
+      - ./infra/airflow/logs:/opt/airflow/logs
+      - ./infra/airflow/plugins:/opt/airflow/plugins
+    env_file:
+      - .env
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+    networks:
+      - mlops_net
+    command: >
+      bash -c "
+        airflow db init &&
+        airflow users create --username airflow --password airflow --firstname Admin --lastname User --role Admin --email airflow@example.com &&
+        airflow webserver & airflow scheduler
+      "
+
+volumes:
+  minio_data:
+
+networks:
+  mlops_net:
+    driver: bridge
