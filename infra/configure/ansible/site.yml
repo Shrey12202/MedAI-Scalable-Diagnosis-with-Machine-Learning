@@ -1,0 +1,49 @@
+- hosts: all
+  become: yes
+  tasks:
+    - name: Install system packages
+      apt:
+        name:
+          - python3
+          - python3-pip
+          - curl
+          - fuse
+        state: present
+        update_cache: yes
+
+    - name: Install rclone
+      shell: curl https://rclone.org/install.sh | bash
+
+    - name: Create rclone config directory
+      file:
+        path: /root/.config/rclone
+        state: directory
+
+    - name: Add rclone config
+      copy:
+        content: |
+          [chi_tacc]
+          type = s3
+          provider = Other
+          access_key_id = <your-access-key>
+          secret_access_key = <your-secret-key>
+          endpoint = https://objects.tacc.chameleoncloud.org
+        dest: /root/.config/rclone/rclone.conf
+
+    - name: Create mount folder
+      file:
+        path: /mnt/chexspert
+        state: directory
+
+    - name: Mount remote bucket
+      shell: |
+        nohup rclone mount chi_tacc:object-persist-project44 /mnt/chexspert \
+          --daemon --allow-other --vfs-cache-mode writes
+
+    - name: Copy training script
+      copy:
+        src: ../../CheXspert MLOps/train/train.py
+        dest: /root/train.py
+
+    - name: Run training script
+      shell: python3 /root/train.py --csv_path /mnt/chexspert/train.csv
