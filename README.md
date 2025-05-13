@@ -411,3 +411,5 @@ Our system assists radiologists and medical practitioners by automating the pred
 
 Follow this pdf: https://github.com/Shrey12202/MedAI-Scalable-Diagnosis-with-Machine-Learning/blob/main/CheXspert%20MLOps/Commands%20to%20follow.pdf
 
+
+Git repo link for data uploading: https://github.com/ShabadVaswani/data-persist-chi
